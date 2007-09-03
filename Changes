@@ -1,0 +1,9 @@
+Revision history for Perl module DBIx::Class::InflateColumn::DateTime::Auto
+0.03 Thu Oct 26 2006
+    - refactoring: change to override method from new to insert
+
+0.02 Wed Aug  2 2006 
+    - pod fixed
+
+0.01 Tue Aug  1 2006
+    - original skeleton created with ExtUtils::ModuleMaker::TT
