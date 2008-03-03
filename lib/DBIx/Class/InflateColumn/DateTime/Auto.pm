@@ -70,6 +70,18 @@ sub get_current_datetime {
     return DateTime->now( time_zone => $self->datetime_timezone );
 }
 
+sub register_column {
+    my ($self, $column, $info, @rest) = @_;
+
+    my $type = $info->{data_type};
+    if (defined $type and lc($type) =~ /^(?:date(?:time)?|timestamp)$/) {
+        $info->{extra} ||= {};
+        $info->{extra}->{timezone} ||= $self->datetime_timezone;
+    }
+
+    return $self->next::method($column, $info, @rest);
+}
+
 1;
 
 __END__
