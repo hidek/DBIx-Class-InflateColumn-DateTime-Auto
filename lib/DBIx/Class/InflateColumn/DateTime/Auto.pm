@@ -9,19 +9,19 @@ use base qw/DBIx::Class::InflateColumn::DateTime/;
 
 use DateTime;
 
-__PACKAGE__->mk_classdata( datetime_timezone => 'local' );
+__PACKAGE__->mk_classdata(datetime_timezone => 'local');
 __PACKAGE__->mk_classdata(
-    _auto_create_datetime_columns => [qw/created_on created_at/] );
+    _auto_create_datetime_columns => [qw/created_on created_at/]);
 __PACKAGE__->mk_classdata(
-    _auto_update_datetime_columns => [qw/updated_on updated_at/] );
+    _auto_update_datetime_columns => [qw/updated_on updated_at/]);
 
 sub auto_create_datetime_columns {
     my $self = shift;
     for (@_) {
         $self->throw_exception("column $_ doesn't exist")
-          unless $self->has_column($_);
+            unless $self->has_column($_);
     }
-    $self->_auto_create_datetime_columns( \@_ ) if @_;
+    $self->_auto_create_datetime_columns(\@_) if @_;
     $self->_auto_create_datetime_columns;
 }
 
@@ -29,24 +29,28 @@ sub auto_update_datetime_columns {
     my $self = shift;
     for (@_) {
         $self->throw_exception("column $_ doesn't exist")
-          unless $self->has_column($_);
+            unless $self->has_column($_);
     }
-    $self->_auto_update_datetime_columns( \@_ ) if @_;
+    $self->_auto_update_datetime_columns(\@_) if @_;
     $self->_auto_update_datetime_columns;
 }
 
 sub insert {
     my $self = shift;
 
-    my $now = $self->get_current_datetime;
+    my $epoch = time();
     for my $column (
-        @{ $self->auto_create_datetime_columns },
-        @{ $self->auto_update_datetime_columns }
-      )
+        @{$self->auto_create_datetime_columns},
+        @{$self->auto_update_datetime_columns}
+        )
     {
-        if ( $self->has_column($column) ) {
-            $self->set_inflated_column( $column => $now )
-              unless $self->get_column($column);
+        if ($self->has_column($column)) {
+            my $timezone
+                = $self->result_source->column_info($column)->{timezone};
+            my $now = DateTime->from_epoch(time_zone => $timezone,
+                epoch => $epoch);
+            $self->set_inflated_column($column => $now)
+                unless $self->get_column($column);
         }
     }
     $self->next::method(@_);
@@ -55,19 +59,18 @@ sub insert {
 sub update {
     my $self = shift;
 
-    my $now = $self->get_current_datetime;
-    for my $column ( @{ $self->auto_update_datetime_columns } ) {
-        if ( $self->has_column($column) ) {
-            $self->set_inflated_column( $column => $now )
-              unless $self->is_column_changed($column);
+    my $epoch = time();
+    for my $column (@{$self->auto_update_datetime_columns}) {
+        if ($self->has_column($column)) {
+            my $timezone
+                = $self->result_source->column_info($column)->{timezone};
+            my $now = DateTime->from_epoch(time_zone => $timezone,
+                epoch => $epoch);
+            $self->set_inflated_column($column => $now)
+                unless $self->is_column_changed($column);
         }
     }
     $self->next::method(@_);
-}
-
-sub get_current_datetime {
-    my $self = shift;
-    return DateTime->now( time_zone => $self->datetime_timezone );
 }
 
 sub register_column {
@@ -75,8 +78,7 @@ sub register_column {
 
     my $type = $info->{data_type};
     if (defined $type and lc($type) =~ /^(?:date(?:time)?|timestamp)$/) {
-        $info->{extra} ||= {};
-        $info->{extra}->{timezone} ||= $self->datetime_timezone;
+        $info->{timezone} ||= $self->datetime_timezone;
     }
 
     return $self->next::method($column, $info, @rest);
